@@ -18,8 +18,8 @@ def helpMessage() {
       --input        Folder containing all input data in FASTQ files (will traverse subdirectories)
       --output       Folder to place analysis outputs (named 'multiqc_report.html')
 
-    Input Files:
-      --suffix              Process all files ending with this string (default: .fastq.gz)
+    Note:
+      All files ending with .fq[.gz] or .fastq[.gz] will be included in the analyis
 
     For more details on FastQC, see https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
     For more details on MultiQC, see https://multiqc.info/docs/
@@ -36,9 +36,6 @@ if (params.help || params.input == null || params.output == null){
     exit 1
 }
 
-// Default options listed here
-params.suffix = ".fastq.gz"
-
 /////////////////////
 // DEFINE FUNCTIONS /
 /////////////////////
@@ -50,7 +47,7 @@ process fastQC {
   container "${container__fastqc}"
 
   input:
-    tuple val(name), file(reads)
+    path reads
 
   output:
     file "*_fastqc.zip"
@@ -58,7 +55,7 @@ process fastQC {
 """
 #!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 fastqc -t ${task.cpus} -o ./ ${reads}
 
@@ -84,7 +81,7 @@ process multiQC {
 """
 #!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 multiqc .
 
@@ -99,10 +96,13 @@ workflow {
 
     // Get the input files ending with BAM
     input_ch = Channel.fromPath(
-        "${params.input}**${params.suffix}"
-    ).map {
-        it -> [it.name.replaceAll(/${params.suffix}/, ''), it]
-    }
+        [
+          "${params.input}**.fastq.gz",
+          "${params.input}**.fastq",
+          "${params.input}**.fq.gz",
+          "${params.input}**.fq"
+        ]
+    )
 
     // Run FastQC on the reads
     fastQC(
