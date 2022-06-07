@@ -69,6 +69,8 @@ ls -lahtr
 process multiQC {
 
   container "${container__multiqc}"
+  cpus 1
+  memory "4.GB"
 
   publishDir "${params.output}", mode: 'copy', overwrite: true
   
